@@ -52,3 +52,5 @@ next-env.d.ts
 
 # setup wizard flag (must not be committed)
 setup_complete.flag
+
+atlas_backup_data/
