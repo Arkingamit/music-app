@@ -41,7 +41,7 @@ export default function SetupPage() {
 
   // Migration state
   const [migration, setMigration] = useState({
-    dumpPath: '',
+    sourceUri: '',
     sourceDbName: 'gracemusic_backup_2026_06_13',
     targetDbName: 'gracemusic',
   });
@@ -117,7 +117,7 @@ export default function SetupPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'migrate-db',
-          dumpPath: migration.dumpPath,
+          sourceUri: migration.sourceUri,
           sourceDbName: migration.sourceDbName,
           targetUri: config.MONGODB_URI,
           targetDbName: migration.targetDbName,
@@ -297,8 +297,7 @@ export default function SetupPage() {
               <strong>⚠️ Prerequisites:</strong> Before continuing, make sure you have:
               <ul className="list-disc list-inside mt-2 space-y-1 text-amber-200/80">
                 <li>MongoDB installed and running on this server</li>
-                <li>Exported your Atlas database using <code className="bg-zinc-800 px-1 rounded">mongodump</code></li>
-                <li>Copied the dump folder to this server</li>
+                <li>Your MongoDB Atlas URI and credentials</li>
               </ul>
             </div>
 
@@ -320,25 +319,17 @@ export default function SetupPage() {
             </p>
 
             <div className="bg-zinc-800/50 rounded-xl p-4 space-y-1 text-sm">
-              <p className="text-zinc-400">First, on your <strong className="text-zinc-200">current machine</strong> run:</p>
-              <pre className="bg-zinc-950 text-green-400 p-3 rounded-lg overflow-x-auto text-xs mt-2 whitespace-pre-wrap">
-{`mongodump --uri="mongodb+srv://your-atlas-uri" \\
-  --db=gracemusic_backup_2026_06_13 \\
-  --out=./atlas_dump
-
-# Then copy to server:
-scp -r ./atlas_dump user@server:~/atlas_dump`}
-              </pre>
+              <p className="text-zinc-400">The system will automatically download your data from Atlas and restore it locally.</p>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-zinc-300 mb-1 block">Dump Folder Path (on this server)</label>
+                <label className="text-sm font-medium text-zinc-300 mb-1 block">Source MongoDB Atlas URI</label>
                 <input
                   type="text"
-                  value={migration.dumpPath}
-                  onChange={(e) => setMigration(m => ({ ...m, dumpPath: e.target.value }))}
-                  placeholder="/home/user/atlas_dump"
+                  value={migration.sourceUri}
+                  onChange={(e) => setMigration(m => ({ ...m, sourceUri: e.target.value }))}
+                  placeholder="mongodb+srv://user:pass@cluster.mongodb.net/"
                   className="w-full px-4 py-2.5 bg-zinc-800 border border-white/10 rounded-xl text-white placeholder-zinc-500 text-sm focus:outline-none focus:border-violet-500"
                 />
               </div>
@@ -365,10 +356,10 @@ scp -r ./atlas_dump user@server:~/atlas_dump`}
 
               <button
                 onClick={migrateDb}
-                disabled={actionLoading || !migration.dumpPath}
+                disabled={actionLoading || !migration.sourceUri || !migration.sourceDbName}
                 className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-700 disabled:text-zinc-500 rounded-xl font-semibold transition-colors"
               >
-                {actionLoading ? 'Migrating...' : '🔄 Run Migration (mongorestore)'}
+                {actionLoading ? 'Migrating...' : '🔄 Auto-Migrate Database'}
               </button>
             </div>
 

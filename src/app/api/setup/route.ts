@@ -148,41 +148,58 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Action: migrate-db — Run mongorestore from a dump folder
+    // Action: migrate-db — Run mongodump and mongorestore
     if (action === 'migrate-db') {
-      const { dumpPath, sourceDbName, targetUri, targetDbName } = body;
+      const { sourceUri, sourceDbName, targetUri, targetDbName } = body;
       
-      if (!dumpPath) {
-        return Response.json({ error: 'Dump path is required' }, { status: 400 });
+      if (!sourceUri || !sourceDbName) {
+        return Response.json({ error: 'Source URI and DB name are required' }, { status: 400 });
       }
 
-      // Validate dump path exists
-      const fullDumpPath = path.resolve(dumpPath, sourceDbName || '');
-      if (!fs.existsSync(fullDumpPath)) {
-        return Response.json({ 
-          error: `Dump path not found: ${fullDumpPath}. Run "mongodump" first.` 
-        }, { status: 400 });
-      }
-
-      // Run mongorestore command
       const { execSync } = await import('child_process');
+      const tempDumpPath = path.resolve(process.cwd(), 'temp_atlas_dump');
+
       try {
-        const uri = targetUri || 'mongodb://localhost:27017';
-        const db = targetDbName || 'gracemusic';
-        const cmd = `mongorestore --uri="${uri}" --db=${db} --drop "${fullDumpPath}"`;
-        
-        const output = execSync(cmd, { 
+        // 1. Run mongodump
+        const dumpCmd = \`mongodump --uri="\${sourceUri}" --db="\${sourceDbName}" --out="\${tempDumpPath}"\`;
+        execSync(dumpCmd, { 
           encoding: 'utf-8', 
-          timeout: 120000,
+          timeout: 300000,
           stdio: ['pipe', 'pipe', 'pipe']
         });
 
+        // Validate dump path exists
+        const fullDumpPath = path.resolve(tempDumpPath, sourceDbName);
+        if (!fs.existsSync(fullDumpPath)) {
+          return Response.json({ 
+            error: \`Failed to dump data from Atlas. Check your URI and DB name.\` 
+          }, { status: 400 });
+        }
+
+        // 2. Run mongorestore
+        const uri = targetUri || 'mongodb://localhost:27017';
+        const db = targetDbName || 'gracemusic';
+        const restoreCmd = \`mongorestore --uri="\${uri}" --db="\${db}" --drop "\${fullDumpPath}"\`;
+        
+        const output = execSync(restoreCmd, { 
+          encoding: 'utf-8', 
+          timeout: 300000,
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
+
+        // 3. Clean up temp dump
+        fs.rmSync(tempDumpPath, { recursive: true, force: true });
+
         return Response.json({ 
           success: true, 
-          message: `Database restored to ${db} successfully!`,
+          message: \`Database dumped from Atlas and restored to \${db} successfully!\`,
           output 
         });
       } catch (e: any) {
+        // Attempt cleanup on error
+        if (fs.existsSync(tempDumpPath)) {
+          fs.rmSync(tempDumpPath, { recursive: true, force: true });
+        }
         return Response.json({ 
           success: false, 
           error: e.stderr || e.message 
