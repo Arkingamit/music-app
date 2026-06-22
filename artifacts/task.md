@@ -1,0 +1,21 @@
+# Tasks
+
+- [x] Modify `src/lib/types.ts`
+  - Remove `editor` from `UserRole`
+  - Change `managerId` to `managerIds` in Organization types
+- [x] Update `src/backend/models/organization.ts`
+  - Handle `managerIds` backward compatibility in `toOrganization`
+  - Ensure `$addToSet`/`$pull` is used for adding/removing managers
+- [x] Update Backend API endpoints
+  - `src/app/api/organizations/[id]/route.ts` - Check `managerIds`
+  - `src/app/api/organizations/[id]/assign-manager/route.ts` -> rename or modify to add manager
+  - [DELETE] `src/app/api/organizations/[id]/appoint-editor/route.ts` 
+  - Update `api/groups/route.ts` and `api/groups/[id]/route.ts` for relaxed permissions
+  - Update `api/songs/route.ts` and `api/songs/[id]/route.ts` to check `managerIds` and remove `editor` logic
+- [ ] Update Frontend Components & Contexts
+  - `OrganizationDetail.tsx`
+  - `GroupSongList.tsx` (Relax `canManage` fallback)
+  - `GroupDetail.tsx` (Relax `canManage` fallback)
+  - `SongList.tsx` & `SongDetail.tsx`
+  - `AdminDashboard.tsx`
+- [ ] Run typechecker to ensure all errors are resolved.
